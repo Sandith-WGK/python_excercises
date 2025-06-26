@@ -1,0 +1,4 @@
+Top student is Kusum with 255 marks.
+Science max mark is 90 and got by Kusum.
+Sinhala max mark is 96 and got by Kelum.
+Maths max mark is 85 and got by Praneeth.

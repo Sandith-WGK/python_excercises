@@ -44,15 +44,23 @@ for line in marks_lines:
     subject_marks[subject][name] = marks
 
 #print(student_marks)
-
+messages = []
 marks_list = [(name,marks)for name,marks in student_marks.items()]
 marks_list.sort(key=get_marks,reverse=True)
 top = marks_list[0]
-
-print(f"Top student is {top[0]} with {top[1]} marks.")
+msgs = f"Top student is {top[0]} with {top[1]} marks."
+print(msgs)
+messages.append(msgs)
 #print(subject_marks)
 
 for subject,dataset in subject_marks.items():
     marks,name = get_top_student(subject,dataset)
     msg =f"{subject} max mark is {marks} and got by {name}."
     print(msg)
+    messages.append(msg)
+
+with open('result.txt','w') as output_file:
+    for msg in messages:
+        output_file.write(msg)
+        output_file.write('\n')
+
