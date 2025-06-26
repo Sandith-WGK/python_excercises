@@ -12,8 +12,8 @@ Alice,Math,85
 Bob,Science,90
 ...
 
-Author: [Your Name]
-Date: [Current Date]
+Author: [Kulitha]
+Date: [26/06/2025]
 """
 
 def get_top_student(subject: str, dataset: dict) -> tuple:
