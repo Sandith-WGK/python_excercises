@@ -9,7 +9,8 @@ def get_top_student(subject:str,dataset:dict):
 
     return max_mark,m_name        
 
-
+def get_marks(record:tuple):
+    return record[1]
 
 
 lines = None
@@ -24,6 +25,7 @@ if not lines:
 marks_lines = lines[1:]
 
 subject_marks = {}
+student_marks = {}
 
 for line in marks_lines:
     entries = line.split(',')
@@ -32,12 +34,23 @@ for line in marks_lines:
     subject = entries[1].strip()
     marks = int(entries[2].strip())
 
+    prev_marks = student_marks.get(name, 0)
+    student_marks[name] = prev_marks + marks
+
+
     if subject not in subject_marks:
         subject_marks[subject] = {}
 
     subject_marks[subject][name] = marks
 
-print(subject_marks)
+#print(student_marks)
+
+marks_list = [(name,marks)for name,marks in student_marks.items()]
+marks_list.sort(key=get_marks,reverse=True)
+top = marks_list[0]
+
+print(f"Top student is {top[0]} with {top[1]} marks.")
+#print(subject_marks)
 
 for subject,dataset in subject_marks.items():
     marks,name = get_top_student(subject,dataset)
