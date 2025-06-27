@@ -21,6 +21,10 @@ class Student(Person):
 
     def print_city(self):
         print(self._city)
+
+    def print_age(self):
+        print(self.get_age()-10)    
+        
 praneeth = Person("Praneeth")
 praneeth.sleep()
 praneeth.set_age(30)
@@ -31,3 +35,5 @@ stu.print_city()
 print("Name is ", praneeth.name)
 print("Age is ", praneeth.get_age())
 print("Age is ", praneeth.__age)
+
+stu.print_age()
