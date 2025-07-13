@@ -1,0 +1,124 @@
+#TODO: Write the functions for arithmatic operations here
+#These functions should cover Task 2
+# Define individual operation functions
+def add(a, b):
+    return a + b
+def subtract(a, b):
+    return a - b
+def multiply(a, b):
+    return a * b
+def divide(a, b):
+    try:
+        return a / b
+    except ZeroDivisionError:
+        print("float division by zero")
+        return None
+def power(a, b):
+    return a ** b
+def remainder(a, b):
+    try:
+        return a % b
+    except ZeroDivisionError:
+        print("float division by zero")
+        return None
+
+def get_input():
+    while True:
+        try:
+            raw1 = input("Enter first number: ")
+            print(raw1)
+            
+            if raw1 == '#':
+                return "#"
+            
+            if raw1.endswith("$") or raw1 == "$":  # Changed: check for exact "$" not endswith
+                return "$"
+            raw2 = input("Enter second number: ")
+            print(raw2)
+            if raw2 == '#':
+                return "#"
+            
+            if raw2.endswith("$") or raw2 == "$":  # Changed: check for exact "$" not endswith
+                return "$"
+            num1 = float(raw1)
+            num2 = float(raw2)
+            return num1, num2
+        except ValueError:
+            print("Not a valid number,please enter again")  # Changed: removed period
+        
+        
+# Main function to choose operation
+def select_op(choice):
+    if choice == '#':
+        return -1
+    elif choice == '$':
+        return 0
+    else:
+        input_result = get_input()
+        if input_result == "$":  # Changed: check for reset signal
+            return 0
+        if input_result == "#":  # Changed: check for reset signal
+            return -1    
+        num1, num2 = input_result  # Changed: unpack here after check
+        
+        if choice == '+':
+            result = add(num1, num2)
+            print(f'{num1} + {num2} = {result}')
+            return result
+        elif choice == '-':
+            result = subtract(num1, num2)
+            print(f'{num1} - {num2} = {result}')
+            return result
+        elif choice == '*':
+            result = multiply(num1, num2)
+            print(f'{num1} * {num2} = {result}')
+            return result
+        elif choice == '/':
+            result = divide(num1, num2)
+            print(f'{num1} / {num2} = {result}')
+            return result
+        elif choice == '^':
+            result = power(num1, num2)
+            print(f'{num1} ^ {num2} = {result}')
+            return result
+        elif choice == '%':
+            result = remainder(num1, num2)
+            print(f'{num1} % {num2} = {result}')
+            return result
+        else:
+            print("Unrecognized operation")
+            return None
+
+#------------------
+#TODO: Write the select_op(choice) function here
+#This function sould cover Task 1 (Section 2) and Task 3
+  
+#End the select_op(choice) function here
+#-------------------------------------
+#This is the main loop. It covers Task 1 (Section 1)
+#YOU DO NOT NEED TO CHANGE ANYTHING BELOW THIS LINE
+while True:
+ print("Select operation.")
+ print("1.Add      : +")  # Changed: adjusted spacing to match expected output
+ print("2.Subtract : -")  # Changed: adjusted spacing
+ print("3.Multiply : *")  # Changed: adjusted spacing
+ print("4.Divide   : /")  # Changed: adjusted spacing
+ print("5.Power    : ^")  # Changed: adjusted spacing
+ print("6.Remainder: %")  # Changed: adjusted spacing
+ print("7.Terminate: #")  # Changed: adjusted spacing
+ print("8.Reset    : $")  # Changed: adjusted spacing
+ 
+ # take input from the user
+ choice = input("Enter choice(+,-,*,/,^,%,#,$): ")
+ print(choice)
+ result = select_op(choice)
+ if result == 0:
+   continue
+   
+ if result == -1:
+  #program ends here
+  print("Done. Terminating")
+  exit()
+ 
+ # Changed: Added handling for other cases (successful calculations, errors)
+ # The loop should continue for all cases except termination

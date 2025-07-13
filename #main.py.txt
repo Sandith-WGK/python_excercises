@@ -1,0 +1,257 @@
+#main.py
+import requests
+import weather_check
+import image_downloader
+import changeWallpaper
+from queue import Queue
+import signal
+
+city ='Colombo'
+api_key ='85742218f59b492493e90953253006'
+queries = Queue()
+images = Queue()
+
+
+if __name__ == '__main__':
+    print("dynamic Wallpaper starting....")
+
+    try:
+
+    
+        weatherEngine = weather_check.WeatherThread(api_key,city,queries,1)
+        
+        image = image_downloader.ImageDownloadThread(queries,images)
+
+        wallpaper = changeWallpaper.ChangeWallpaper(images)
+
+        weatherEngine.start()
+        image.start()
+        wallpaper.start()
+
+        weatherEngine.join()
+        image.join()
+        wallpaper.join()
+
+    except Exception as e:
+        print(f"Error starting application: {e}")
+
+    #changeWallpaper.py
+import ctypes
+import image_downloader
+from threading import Thread
+import os
+import time 
+from queue import Empty
+
+class ChangeWallpaper(Thread):
+    def __init__(self,img_paths):
+        super(ChangeWallpaper,self).__init__()
+        self.img_paths = img_paths
+        self.daemon = True
+
+    def run(self):
+        while True:
+            try:
+                image_path = self.img_paths.get(timeout=10)
+                
+                # Convert to absolute path and ensure it exists
+                abs_image_path = os.path.abspath(image_path)
+                if not os.path.exists(abs_image_path):
+                    print(f"Image file not found: {abs_image_path}")
+                    continue
+                
+                # Convert to Windows path format
+                windows_path = abs_image_path.replace('/', '\\')
+                
+                # SPI_SETDESKWALLPAPER = 0x0014 (20 in decimal)
+                # SPIF_UPDATEINIFILE = 0x01
+                # SPIF_SENDCHANGE = 0x02
+                # SPIF_UPDATEINIFILE | SPIF_SENDCHANGE = 0x03
+                result = ctypes.windll.user32.SystemParametersInfoW(
+                    0x0014,  # SPI_SETDESKWALLPAPER
+                    0,       # uiParam
+                    windows_path,  # pvParam
+                    0x03     # fWinIni (SPIF_UPDATEINIFILE | SPIF_SENDCHANGE)
+                )
+                
+                if result:
+                    print(f"Wallpaper changed successfully: {windows_path}")
+                else:
+                    print(f"Failed to change wallpaper: {windows_path}")
+                    
+            except Empty:
+                # This is normal - no new images in queue
+                continue
+            except Exception as e:
+                if str(e).strip():  # Only print if there's an actual error message
+                    print(f"Error setting wallpaper: {e}")
+            
+            time.sleep(5)
+#weather_check.py
+from threading import Thread
+import requests
+import time
+
+class WeatherThread(Thread):
+
+    def __init__(self,api_key,city,queries,delay = 5):
+        super(WeatherThread,self).__init__()
+
+        self.api_key = api_key
+        self.city = city
+        self.delay = delay
+        self.queries = queries
+        self.daemon = True
+        self.last_weather = None
+
+    def run(self):
+
+        while True:
+            try:
+                weather = self.__getWeather(self.api_key, self.city)
+                if weather and weather != self.last_weather:
+                    self.queries.put(weather)
+                    self.last_weather = weather
+                    print(f"Weather update: {weather}")
+                time.sleep(self.delay)
+            except Exception as e:
+                print(f"Error in weather thread: {e}")
+                time.sleep(10)  # Wait before retrying
+
+           
+    def __getWeather(self,api_key,city):
+
+        try:
+            url = f'http://api.weatherapi.com/v1/current.json?key={api_key}&q={city}&aqi=no'
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            
+            current = response.json()['current']
+            condition_text = current['condition']['text']
+            temperature = current['temp_c']
+            
+            # Create more descriptive query for better image results
+            weather_query = f"{condition_text.lower()} weather nature landscape"
+            return weather_query
+            
+        except requests.exceptions.RequestException as e:
+            print(f"Weather API request failed: {e}")
+            return None
+        except KeyError as e:
+            print(f"Unexpected weather API response format: {e}")
+            return None
+#image_downloader.py
+from threading import Thread
+import requests
+import time
+import os
+from datetime import datetime
+from queue import Empty
+import sys
+
+class ImageDownloadThread(Thread):
+    def __init__(self,queries,images):
+        super(ImageDownloadThread,self).__init__()
+
+        self.queries = queries
+        self.daemon = True
+        self.downloaded_images = set()
+        self.images = images
+
+        # Create images directory if it doesn't exist
+        if not os.path.exists('images'):
+            os.makedirs('images')
+
+
+    def run(self):
+            
+            access_key = 'exfbs2yWEXVuAiNgLiyBmDVgGhL-p-ODxohJ5nUSWCg'
+            
+            while True:
+
+                try:
+                    # Wait for weather query with timeout
+                    query = self.queries.get(timeout=5)
+                    print(f"Downloading images for: {query}")
+                    
+                    url = f'https://api.unsplash.com/search/photos?page=1&query={query}&client_id={access_key}&per_page=5'
+                    
+                    response = requests.get(url, timeout=10)
+                    response.raise_for_status()
+                    
+                    data = response.json()
+                    
+                    if 'results' not in data or not data['results']:
+                        print(f"No images found for query: {query}")
+                        continue
+                    
+                    # Download only the best image to avoid spam
+                    photo = data['results'][0]
+                    image_url = photo['urls']['regular']
+                    image_id = photo['id']
+                    
+                    # Avoid downloading the same image twice
+                    if image_id not in self.downloaded_images:
+                        if self.download_img(image_url, query, image_id):
+                            self.downloaded_images.add(image_id)
+                            # Clean up old images to save space
+                            self._cleanup_old_images()
+                    
+                    self.queries.task_done()
+                    #time.sleep(2)
+                    
+                except Empty:
+                    continue
+                except requests.exceptions.RequestException as e:
+                    print(f"Failed to fetch images: {e}")
+                    time.sleep(5)
+                except Exception as e:
+                    print(f"Error in image download thread: {e}")
+                    time.sleep(5)      
+
+
+    def download_img(self, url, query, image_id):
+        try:
+            response = requests.get(url, stream=True, timeout=30)
+            response.raise_for_status()
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            # Clean query for filename
+            clean_query = "".join(c for c in query if c.isalnum() or c in (' ', '-', '_')).rstrip()
+            clean_query = clean_query.replace(' ', '_')[:20]  # Limit length
+            
+            file_name = f'images/wallpaper_{clean_query}_{timestamp}.jpg'
+            
+            with open(file_name, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            
+            print(f'Image successfully downloaded: {file_name}')
+            self.images.put(file_name)
+            return True
+            
+        except requests.exceptions.RequestException as e:
+            print(f'Failed to download image: {e}')
+            return False
+        except Exception as e:
+            print(f'Error saving image: {e}')
+            return False
+
+    def _cleanup_old_images(self):
+        """Keep only the latest 10 images to save disk space"""
+        try:
+            images_dir = 'images'
+            files = [f for f in os.listdir(images_dir) if f.endswith('.jpg')]
+            files.sort(key=lambda x: os.path.getctime(os.path.join(images_dir, x)))
+            
+            # Remove older files, keep latest 10
+            while len(files) > 10:
+                old_file = files.pop(0)
+                os.remove(os.path.join(images_dir, old_file))
+                print(f"Removed old image: {old_file}")
+        except Exception as e:
+            print(f"Error cleaning up old images: {e}")
+Check all the timngs and will this program work properly ? check any errors
+whata are the possibilities of failure ? is multithreading or multiprocess good for this?
+   
+    
